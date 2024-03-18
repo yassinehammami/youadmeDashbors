@@ -72,6 +72,7 @@ const AddProduct = React.lazy(() => import('./views/addproduct/AddProduct'))
 const ListProduct = React.lazy(() => import('./views/listproduct/ListProduct'))
 const UpdateProduct = React.lazy(() => import('./views/updateproduct/UpdateProduct'))
 const ListCommande = React.lazy(() => import('./views/listcommande/ListCommande'))
+const CommandeListTable = React.lazy(() => import('./views/commandelisttable/CommandeListTable'))
 const routes = [
   { path: '/', exact: true, name: 'Home' },
   { path: '/dashboard', name: 'Dashboard', element: Dashboard },
@@ -140,6 +141,7 @@ const routes = [
   { path: '/listproduct', name: 'ListProduct', element: ListProduct },
   { path: '/updateproduct/:productId', name: 'UpdateProduct', element: UpdateProduct },
   { path: '/listcommande', name: 'ListCommande', element: ListCommande },
+  { path: '/commandelisttable', name: 'CommandeListTable', element: CommandeListTable },
 ]
 
 export default routes

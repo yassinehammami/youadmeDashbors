@@ -22,7 +22,7 @@ import { useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import avatar1 from 'src/assets/images/scat.png'
+import avatar1 from 'src/assets/images/img.png'
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -111,13 +111,13 @@ const Login = () => {
               <CCard className="text-white bg-primary py-5" style={{ width: '44%' }}>
                 <CCardBody className="text-center">
                   <div>
-                  <img
+               <img
          className="logo"
         src={avatar1}
         alt="SCAT Logo"
         style={{ width: '300px', height: '200px' }}
       />
-      
+
                     {/*<h2>Sign up</h2>
                    
                     <Link to="/register">

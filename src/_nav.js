@@ -67,6 +67,12 @@ const _nav = [
         to: '/listcommande',
        
       },
+      {
+        component: CNavItem,
+        name: 'list commande',
+        to: '/commandelisttable',
+       
+      },
     ],
   },
   {
