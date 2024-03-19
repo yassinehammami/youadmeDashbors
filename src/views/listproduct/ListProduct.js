@@ -15,6 +15,7 @@ import {
 import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { fire } from '../../components/firebase-config';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const ListProduct = () => {
   const [products, setProducts] = useState([]);
@@ -27,31 +28,45 @@ const ListProduct = () => {
 
   const navigate = useNavigate();
 
-  const fetchData = async () => {
-    const productsRef = collection(fire, 'products');
-    onSnapshot(productsRef, (snapshot) => {
-      const productArray = [];
-      snapshot.forEach((doc) => {
-        const productData = doc.data();
-        productData.id = doc.id;
-        productArray.push(productData);
-      });
-      setProducts(productArray);
-    });
-  };
+  // const fetchData = async () => {
+  //   const productsRef = collection(fire, 'products');
+  //   onSnapshot(productsRef, (snapshot) => {
+  //     const productArray = [];
+  //     snapshot.forEach((doc) => {
+  //       const productData = doc.data();
+  //       productData.id = doc.id;
+  //       productArray.push(productData);
+  //     });
+  //     setProducts(productArray);
+  //   });
+  // };
 
   useEffect(() => {
-    fetchData();
+    const fetchProducts = async () => {
+      try {
+        await axios.get('http://localhost:4000/produit')
+        .then(res => {
+          const { message , data } = res.data;
+          if (message==="Success") {
+            setProducts(data);
+          }
+          });
+        
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+    fetchProducts();
   }, []);
 
-  const handleDelete = async (id) => {
-    try {
-      const productRef = doc(fire, 'products', id);
-      await deleteDoc(productRef);
-    } catch (error) {
-      console.error('Erreur lors de la suppression du produit:', error.message);
-    }
-  };
+  // const handleDelete = async (id) => {
+  //   try {
+  //     const productRef = doc(fire, 'products', id);
+  //     await deleteDoc(productRef);
+  //   } catch (error) {
+  //     console.error('Erreur lors de la suppression du produit:', error.message);
+  //   }
+  // };
 
   const handleUpdate = (id) => {
     navigate(`/updateproduct/${id}`);
@@ -68,7 +83,7 @@ const ListProduct = () => {
     return (
       product.name.toLowerCase().includes(filters.name.toLowerCase()) &&
       product.price.toString().includes(filters.price) &&
-      product.volume.toLowerCase().includes(filters.volume.toLowerCase()) &&
+      product.volume.toString().toLowerCase().includes(filters.volume.toLowerCase()) &&
       (product.propertiesCosmetics || '').toLowerCase().includes(filters.propertiesCosmetics.toLowerCase())
     );
   });
@@ -126,8 +141,8 @@ const ListProduct = () => {
               <CTableDataCell>{product.volume}</CTableDataCell>
               <CTableDataCell>{product.propertiesCosmetics}</CTableDataCell>
               <CTableDataCell>
-                {product.imageUrls && product.imageUrls.length > 0 && (
-                  <CImage src={product.imageUrls[0]} height={50} />
+                {product.images && product.images.length > 0 && (
+                  <CImage src={product.images[0].filepath} height={50} />
                 )}
               </CTableDataCell>
               <CTableDataCell>
@@ -139,13 +154,13 @@ const ListProduct = () => {
                 >
                   Modifier
                 </CButton>
-                <CButton
+                {/* <CButton
                   variant="outline"
                   color="danger"
                   onClick={() => handleDelete(product.id)}
                 >
                   Supprimer
-                </CButton>
+                </CButton> */}
               </CTableDataCell>
             </CTableRow>
           ))}

@@ -1,9 +1,10 @@
 /* eslint-disable prettier/prettier */
 // eslint-disable-next-line prettier/prettier
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { fire, storage } from '../../components/firebase-config';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import axios from 'axios'; // Import axios
 import {
   CButton,
   CCard,
@@ -27,46 +28,54 @@ const ProductForm = () => {
   const [volume, setVolume] = useState('');
   const [propertiesCosmetics, setPropertiesCosmetics] = useState('');
   const [designation, setDesignation] = useState('');
+  const [token, setToken]= useState();
 
+  useEffect(() => {
+    const token =localStorage.getItem('token');
+    setToken(token);;
+  }, []);
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (images.length === 0) {
       toast.error('Veuillez télécharger au moins une image pour le produit');
       return;
     }
+  
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('price', price);
+    formData.append('description', description);
+    formData.append('volume', volume);
+    formData.append('designation', designation);
+    formData.append('propertiesCosmetics', propertiesCosmetics);
+    images.forEach((image) => formData.append('images', image));
+  
     try {
-      const imageUrls = [];
-      for (const image of images) {
-        // Upload each image to Firebase Storage
-        const imageRef = ref(storage, `products/${image.name}`);
-        const snapshot = await uploadBytes(imageRef, image);
-        const imageUrl = await getDownloadURL(snapshot.ref);
-        imageUrls.push(imageUrl);
-      }
-
-      // Add the product to Firestore with all the details
-      await addDoc(collection(fire, 'products'), {
-        name,
-        price: parseFloat(price),
-        imageUrls, // Save the array of image URLs
-        description,
-        volume,
-        propertiesCosmetics,
-        designation
+      const response = await axios.post('http://localhost:4000/produit/create', formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      setName('');
-      setPrice('');
-      setImages([]);
-      setDescription('');
-      setVolume('');
-      setPropertiesCosmetics('');
-      setDesignation('');
-      toast.success('Produit ajouté avec succès !');
+  
+      if (response.status === 201) {
+        setName('');
+        setPrice('');
+        setImages([]);
+        setDescription('');
+        setVolume('');
+        setPropertiesCosmetics('');
+        setDesignation('');
+        toast.success('Produit ajouté avec succès !');
+      } else {
+        throw new Error('Failed to create product');
+      }
     } catch (error) {
       console.error("Erreur lors de l'ajout du produit : ", error);
       toast.error(`Erreur lors de l'ajout du produit : ${error.message}`);
     }
   };
+  
 
   return (
     <div className="app-container">
@@ -166,13 +175,14 @@ const ProductForm = () => {
               <CRow>
                 <CCol md="12">
                   <CInputGroup className="mb-3">
-                    <CFormInput
+                  <CFormInput
                       type="file"
                       name="images"
                       accept="image/*"
                       multiple
                       onChange={(e) => setImages(Array.from(e.target.files))}
                     />
+
                   </CInputGroup>
                 </CCol>
               </CRow>
@@ -196,6 +206,3 @@ const ProductForm = () => {
 };
 
 export default ProductForm;
-
-
-

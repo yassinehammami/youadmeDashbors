@@ -20,28 +20,40 @@ import {
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 const UpdateProductForm = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState({});
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
-
+  const [token, setToken]= useState();
   useEffect(() => {
+    console.log(productId);
+    const token = localStorage.getItem('token');
+    setToken(token);
     const fetchProduct = async () => {
-      const docRef = doc(fire, 'products', productId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setProduct(docSnap.data());
-        setImagePreviews(docSnap.data().imageUrls || []);
-      } else {
-        console.log('No such document!');
+      try {
+        const response = await axios.get(`http://192.168.1.25:4000/produit/${productId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.status !== 200) {
+          throw new Error('Failed to fetch product');
+        }
+        setProduct(response.data.data);
+        // Set the main image URL to the first image in the images array
+        if (response.data.data.images && response.data.data.images.length > 0) {
+          setImagePreviews(response.data.data.images.map((image) => image.filepath));
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
       }
     };
-
     fetchProduct();
   }, [productId]);
-
+  
   useEffect(() => {
     if (images.length > 0) {
       const newImagePreviews = images.map((image) =>
@@ -53,27 +65,40 @@ const UpdateProductForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const formData = new FormData();
+    formData.append('id', productId);
+    formData.append('name', product.name);
+    formData.append('description', product.description);
+    formData.append('price', product.price);
+    formData.append('volume', product.volume);
+    formData.append('designation', product.designation);
+    formData.append('propertiesCosmetics', product.propertiesCosmetics);
     if (images.length > 0) {
-      const imageUrls = [];
-      for (const image of images) {
-        const imageRef = ref(storage, `products/${image.name}`);
-        const snapshot = await uploadBytes(imageRef, image);
-        const imageUrl = await getDownloadURL(snapshot.ref);
-        imageUrls.push(imageUrl);
-      }
-      product.imageUrls = imageUrls;
+      images.forEach(image => {
+        formData.append('images', image);
+      });
     }
-
+  
     try {
-      const docRef = doc(fire, 'products', productId);
-      await updateDoc(docRef, product);
-      toast.success('Produit mis à jour avec succès !');
-      navigate('/listproduct'); // Navigate to ListProduct page
+      const response = await axios.put('http://192.168.1.25:4000/produit/update',formData,{
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      if (response.data.message=="Product updated successfully!") {
+        toast.success('Produit mis à jour avec succès !');
+        navigate('/listproduct'); // Navigate to ListProduct page
+      } else if(response.data.message=="Unauthorized: Access token is required") {
+        navigate('/login');
+        throw new Error(response.data.message);
+      }
     } catch (error) {
       console.error("Erreur lors de la mise à jour du produit : ", error);
       toast.error(`Erreur lors de la mise à jour du produit : ${error.message}`);
     }
   };
+  
   return (
     <div className="app-container">
       <ToastContainer
@@ -188,7 +213,7 @@ const UpdateProductForm = () => {
                     {imagePreviews.map((imageUrl, index) => (
                       <CImage
                         key={index}
-                        src={imageUrl}
+                        src={imageUrl.filepath}
                         alt="Product Image"
                         height={100}
                         className="me-2"

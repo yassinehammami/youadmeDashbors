@@ -12,21 +12,36 @@ import {
 } from '@coreui/react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { fire } from '../../components/firebase-config';
+import axios from 'axios';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 const CommandeListTable = () => {
   const [commandes, setCommandes] = useState([]);
-
+  const [token, setToken]= useState();
+  const navigate = useNavigate();
   useEffect(() => {
-    const commandesRef = collection(fire, 'commande');
-    onSnapshot(commandesRef, (snapshot) => {
-      const commandeArray = [];
-      snapshot.forEach((doc) => {
-        const commandeData = doc.data();
-        commandeData.id = doc.id; // Unique identifier
-        commandeArray.push(commandeData);
-      });
-      setCommandes(commandeArray);
-    });
+    const token =localStorage.getItem('token');
+    setToken(token);;
+    const fetchCommandes = async () => {
+      try {
+        // Replace 'http://localhost:4000' with your actual backend URL
+        const response = await axios.get('http://localhost:4000/commande', {
+          headers: {
+            'Content-Type': 'application/json', // Set content type to JSON
+            'Authorization': `Bearer ${token}` // Include the token in the Authorization header
+          }
+        });
+        if (response.data && response.data.message === 'Success') {
+          setCommandes(response.data.data);
+        } else if (response.data.message === 'Unauthorized: Access token is required') {
+          navigate(`/login`);
+        }
+      } catch (error) {
+        console.error('Error fetching commandes:', error);
+        // toast.error('Error fetching commandes: ' + error.message);
+      }
+    };
+    fetchCommandes();
   }, []);
 
   return (
@@ -42,21 +57,23 @@ const CommandeListTable = () => {
           </CTableRow>
         </CTableHead>
         <CTableBody>
-          {commandes.map((commande) => (
-            <CTableRow key={commande.id}>
-              <CTableDataCell>{commande.commandeDate?.toDate()?.toLocaleDateString() || 'N/A'}</CTableDataCell>
-              <CTableDataCell>{commande.totalPrice} DT</CTableDataCell>
-              <CTableDataCell>{commande.status || 'Pending'}</CTableDataCell>
-              <CTableDataCell>{commande.userId}</CTableDataCell>
-              <CTableDataCell>
-                {commande.products.map((product, index) => (
-                  <div key={index}>
-                    {product.name} - {product.price} DT
-                  </div>
-                ))}
-              </CTableDataCell>
-            </CTableRow>
-          ))}
+        {commandes.map((commande) => (
+          <CTableRow key={commande.id}>
+            <CTableDataCell>{commande.commandeDate ? new Date(commande.commandeDate).toLocaleDateString() : 'N/A'}</CTableDataCell>
+            <CTableDataCell>{commande.totalPrice} DT</CTableDataCell>
+            <CTableDataCell>{commande.state || 'Pending'}</CTableDataCell>
+            <CTableDataCell>
+              {commande.user ? `${commande.user.firstName} ${commande.user.lastName}` : 'N/A'}
+            </CTableDataCell>
+            <CTableDataCell>
+              {commande.products.map((product, index) => (
+                <div key={index}>
+                  {product.name}
+                </div>
+              ))}
+            </CTableDataCell>
+          </CTableRow>
+        ))}
         </CTableBody>
       </CTable>
     </CContainer>

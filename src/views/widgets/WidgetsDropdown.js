@@ -1,4 +1,6 @@
-import React from 'react'
+/* eslint-disable prettier/prettier */
+// eslint-disable-next-line prettier/prettier
+import React, { useEffect, useState } from 'react';
 import {
   CRow,
   CCol,
@@ -8,39 +10,46 @@ import {
   CDropdownToggle,
   CWidgetStatsA,
 } from '@coreui/react'
+import { collection, getDocs } from 'firebase/firestore';
+import { fire } from '../../components/firebase-config';
 import { getStyle } from '@coreui/utils'
 import { CChartBar, CChartLine } from '@coreui/react-chartjs'
 import CIcon from '@coreui/icons-react'
 import { cilArrowBottom, cilArrowTop, cilOptions } from '@coreui/icons'
 
 const WidgetsDropdown = () => {
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [prevDayUsers, setPrevDayUsers] = useState(0); // Assume this is fetched from somewhere
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const usersRef = collection(fire, 'users');
+      const usersSnapshot = await getDocs(usersRef);
+      setTotalUsers(usersSnapshot.size);
+    };
+
+    fetchUsers();
+  }, []);
+
+  const percentageChange = ((totalUsers - prevDayUsers) / prevDayUsers) * 100;
+
   return (
     <CRow>
-      <CCol sm={6} lg={3}>
+    <CCol sm={6} lg={3}>
         <CWidgetStatsA
           className="mb-4"
           color="primary"
-          value={
-            <>
-              26K{' '}
-              <span className="fs-6 fw-normal">
-                (-12.4% <CIcon icon={cilArrowBottom} />)
-              </span>
-            </>
-          }
+          value={`${totalUsers}`}
           title="Users"
           action={
-            <CDropdown alignment="end">
-              <CDropdownToggle color="transparent" caret={false} className="p-0">
-                <CIcon icon={cilOptions} className="text-high-emphasis-inverse" />
-              </CDropdownToggle>
-              <CDropdownMenu>
-                <CDropdownItem>Action</CDropdownItem>
-                <CDropdownItem>Another action</CDropdownItem>
-                <CDropdownItem>Something else here...</CDropdownItem>
-                <CDropdownItem disabled>Disabled action</CDropdownItem>
-              </CDropdownMenu>
-            </CDropdown>
+            <span className="fs-6 fw-normal">
+              {percentageChange.toFixed(1)}%{' '}
+              {percentageChange >= 0 ? (
+                <CIcon icon={cilArrowTop} className="text-success" />
+              ) : (
+                <CIcon icon={cilArrowBottom} className="text-danger" />
+              )}
+            </span>
           }
           chart={
             <CChartLine
@@ -50,11 +59,11 @@ const WidgetsDropdown = () => {
                 labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
                 datasets: [
                   {
-                    label: 'My First dataset',
+                    label: 'Users',
                     backgroundColor: 'transparent',
                     borderColor: 'rgba(255,255,255,.55)',
-                    pointBackgroundColor: getStyle('--cui-primary'),
-                    data: [65, 59, 84, 84, 51, 55, 40],
+                    pointBackgroundColor: 'rgba(255,255,255,.55)',
+                    data: [65, 59, 84, 84, 51, 55, 40], // Replace with your data
                   },
                 ],
               }}

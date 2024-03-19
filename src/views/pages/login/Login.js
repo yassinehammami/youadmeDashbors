@@ -22,8 +22,11 @@ import { useNavigate } from 'react-router-dom'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import avatar1 from 'src/assets/images/img.png'
+import avatar1 from 'src/assets/images/logo-offciel.png'
+import axios from 'axios';
+
 const Login = () => {
+  const [accessToken, setAccessToken] = useState(null); // State to store access token
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -42,23 +45,26 @@ const Login = () => {
     e.preventDefault()
 
     try {
-      // Sign in the user with Firebase Authentication
-      const userCredential = await signInWithEmailAndPassword(auth,formData.email, formData.password)
-      const authenticatedUser = userCredential.user
 
-      // Store user information in the state
-      setUser(authenticatedUser)
-
-      navigate('../addmissions')
-
-      // You can navigate to the home page or any other page after successful sign-in
-      // For example:
-      // navigate("/home");
-
-      toast.success('Successfully signed in')
+       await axios.post('http://localhost:4000/admin/login', {
+        email: formData.email,
+        password: formData.password,
+      }).then(res => {
+        const { token ,message } = res.data;
+        if (token) {
+          // Login successful
+          localStorage.setItem('token', token);
+          toast.success('Connexion réussie!');
+          navigate('../addmissions') // Redirect to dashboard or any authenticated route
+        } else {
+          // Login failed
+          toast.error(message || 'Erreur de connexion. Veuillez réessayer.');
+        }
+      });
+    
     } catch (error) {
-      console.error('Error signing in:', error.message)
-      toast.error('Error signing in: ' + error.message)
+      console.error('Error signing in:', error.message);
+      toast.error('Error signing in: ' + error.message);
     }
   }
   return (
@@ -111,13 +117,12 @@ const Login = () => {
               <CCard className="text-white bg-primary py-5" style={{ width: '44%' }}>
                 <CCardBody className="text-center">
                   <div>
-               <img
-         className="logo"
+                  <img
+        className="logo"
         src={avatar1}
-        alt="SCAT Logo"
+        alt="Statico Logo"
         style={{ width: '300px', height: '200px' }}
       />
-
                     {/*<h2>Sign up</h2>
                    
                     <Link to="/register">

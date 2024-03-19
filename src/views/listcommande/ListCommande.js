@@ -13,46 +13,57 @@ import {
 } from '@coreui/react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
+import {  useNavigate } from 'react-router-dom';
 const CommandeList = () => {
   const [commandes, setCommandes] = useState([]);
-
+  const [token, setToken]= useState();
+  const navigate = useNavigate();
   useEffect(() => {
+    const token =localStorage.getItem('token');
+    setToken(token);
     const fetchCommandes = async () => {
-      const commandesCollectionRef = collection(fire, 'commande');
-      const commandesSnapshot = await getDocs(commandesCollectionRef);
-      const commandesList = await Promise.all(commandesSnapshot.docs.map(async (docSnapshot) => {
-        const commandeData = docSnapshot.data();
-        if (commandeData.status) {
-          return null; // Exclude commandes with a status field
+      try {
+        // Replace 'http://localhost:4000' with your actual backend URL
+        const response = await axios.get('http://localhost:4000/commande', {
+          headers: {
+            'Content-Type': 'application/json', // Set content type to JSON
+            'Authorization': `Bearer ${token}` // Include the token in the Authorization header
+          }
+        });
+        if (response.data && response.data.message === 'Success') {
+          setCommandes(response.data.data);
+        } else if (response.data.message === 'Unauthorized: Access token is required') {
+          navigate(`/login`);
         }
-        const userRef = doc(fire, 'users', commandeData.userId);
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.exists() ? userSnap.data() : null;
-        const { password, id, ...userDetails } = userData || {}; // Exclude password and id
-        const productsWithNames = commandeData.products && Array.isArray(commandeData.products) ? await Promise.all(commandeData.products.map(async (product) => {
-          const productRef = doc(fire, 'products', product.id);
-          const productSnap = await getDoc(productRef);
-          const productName = productSnap.exists() ? productSnap.data().name : 'Unknown Product';
-          return { name: productName, price: product.price };
-        })) : [];
-        return { id: docSnapshot.id, ...commandeData, products: productsWithNames, user: userDetails };
-      }));
-      setCommandes(commandesList.filter(commande => commande !== null)); // Filter out null values
+      } catch (error) {
+        console.error('Error fetching commandes:', error);
+        toast.error('Error fetching commandes: ' + error.message);
+      }
     };
     fetchCommandes();
   }, []);
 
   const updateStatus = async (commandeId, status) => {
-    const commandeRef = doc(fire, 'commande', commandeId);
     try {
-      await updateDoc(commandeRef, { status: status });
-      setCommandes(commandes.filter(commande => commande.id !== commandeId)); // Remove the updated commande from the list
-      toast.success(`Commande ${status === 'Confirmed' ? 'confirmée' : 'rejetée'} avec succès !`);
+      const response = await axios.put(`http://localhost:4000/commande/update/${commandeId}`, { state: status },{
+        headers: {
+          'Content-Type': 'application/json', // Set content type to JSON
+          'Authorization': `Bearer ${token}` // Include the token in the Authorization header
+        }
+      });
+      if (response.status === 200) {
+        setCommandes(commandes.filter(commande => commande.id !== commandeId)); // Remove the updated commande from the list
+        toast.success(`Commande ${status === 'Confirmed' ? 'confirmée' : 'rejetée'} avec succès !`);
+      } else {
+        throw new Error('Failed to update commande status');
+      }
     } catch (error) {
       console.error("Erreur lors de la mise à jour du statut de la commande : ", error);
       toast.error(`Erreur lors de la mise à jour du statut de la commande : ${error.message}`);
     }
   };
+  
   
   return (
     <CContainer>
@@ -61,7 +72,7 @@ const CommandeList = () => {
       {commandes.map((commande) => (
         <CCard key={commande.id} className="mb-3">
           <CCardBody>
-            <CCardTitle>Date: {commande.commandeDate?.toDate()?.toLocaleDateString() || 'N/A'}</CCardTitle>
+          <CCardTitle>Date: {commande.commandeDate || 'N/A'}</CCardTitle>
             <p>Total: {commande.totalPrice} DT</p>
             <p>Client:</p>
             <ul>
