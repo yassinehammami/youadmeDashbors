@@ -34,7 +34,7 @@ const UpdateProductForm = () => {
     setToken(token);
     const fetchProduct = async () => {
       try {
-        const response = await axios.get(`http://192.168.1.25:4000/produit/${productId}`, {
+        const response = await axios.get(`http://localhost:4000/produit/${productId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -80,7 +80,7 @@ const UpdateProductForm = () => {
     }
   
     try {
-      const response = await axios.put('http://192.168.1.25:4000/produit/update',formData,{
+      const response = await axios.put('http://localhost:4000/produit/update',formData,{
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
