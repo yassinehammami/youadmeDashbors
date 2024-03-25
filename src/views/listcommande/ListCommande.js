@@ -22,6 +22,7 @@ const CommandeList = () => {
   useEffect(() => {
     const token =localStorage.getItem('token');
     setToken(token);
+    console.log(token);
     const fetchCommandes = async () => {
       try {
         // Replace 'http://localhost:4000' with your actual backend URL
@@ -85,7 +86,7 @@ const CommandeList = () => {
             <CListGroup>
               {commande.products.map((product, index) => (
                 <CListGroupItem key={index}>
-                  {product.name} - {product.price} DT
+                  {product.name} - {product.price} DT - {product.quantity}
                 </CListGroupItem>
               ))}
             </CListGroup>

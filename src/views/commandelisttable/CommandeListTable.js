@@ -69,6 +69,7 @@ const CommandeListTable = () => {
               {commande.products.map((product, index) => (
                 <div key={index}>
                   {product.name}
+                  {product.quantity}
                 </div>
               ))}
             </CTableDataCell>
