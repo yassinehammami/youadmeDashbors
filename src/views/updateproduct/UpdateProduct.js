@@ -213,7 +213,7 @@ const UpdateProductForm = () => {
                     {imagePreviews.map((imageUrl, index) => (
                       <CImage
                         key={index}
-                        src={imageUrl.filepath}
+                        src={imageUrl}
                         alt="Product Image"
                         height={100}
                         className="me-2"

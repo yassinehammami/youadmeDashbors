@@ -1,21 +1,18 @@
 /* eslint-disable prettier/prettier */
 // eslint-disable-next-line prettier/prettier
 import React, { useEffect, useState } from 'react';
-import { CCard, CCardBody, CCol, CCardHeader, CRow } from '@coreui/react'
+import { CCard, CCardBody, CCol, CCardHeader, CRow } from '@coreui/react';
 import {
   CChartBar,
   CChartDoughnut,
-  CChartLine,
   CChartPie,
   CChartPolarArea,
   CChartRadar,
-} from '@coreui/react-chartjs'
-import { DocsCallout } from 'src/components'
+} from '@coreui/react-chartjs';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { fire } from '../../components/firebase-config';
 
 const Charts = () => {
-  const random = () => Math.round(Math.random() * 100)
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: [
@@ -38,23 +35,42 @@ const Charts = () => {
     ],
   });
 
+  const [gouvernoratChartData, setGouvernoratChartData] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: 'Commandes par gouvernorat',
+        backgroundColor: '#36A2EB',
+        data: [],
+      },
+    ],
+  });
+
   useEffect(() => {
     const fetchCommandes = async () => {
       const commandesRef = collection(fire, 'commande');
       const commandesSnapshot = await getDocs(commandesRef);
       const productCounts = {};
       const dailySums = {};
+      const gouvernoratCounts = {};
 
-      commandesSnapshot.forEach((doc) => {
-        const commande = doc.data();
+      for (const docSnapshot of commandesSnapshot.docs) {
+        const commande = docSnapshot.data();
         const date = commande.commandeDate.toDate().toISOString().split('T')[0];
         dailySums[date] = (dailySums[date] || 0) + commande.totalPrice;
 
         commande.products.forEach((product) => {
           productCounts[product.id] = (productCounts[product.id] || 0) + 1;
         });
-      });
 
+        const userRef = doc(fire, 'users', commande.userId);
+        const userSnap = await getDoc(userRef);
+        const user = userSnap.data();
+        const gouvernorat = user.gouvernorat;
+        gouvernoratCounts[gouvernorat] = (gouvernoratCounts[gouvernorat] || 0) + 1;
+      }
+
+      // Set chart data for products
       const productLabels = [];
       const productData = [];
       const backgroundColors = [];
@@ -78,72 +94,6 @@ const Charts = () => {
         ],
       });
 
-      const sortedDates = Object.keys(dailySums).sort();
-      const sortedSums = sortedDates.map(date => dailySums[date]);
-      setBarChartData({
-        labels: sortedDates,
-        datasets: [
-          {
-            label: 'Total Commandes',
-            backgroundColor: '#f87979',
-            data: sortedSums,
-          },
-        ],
-      });
-    };
-
-    fetchCommandes();
-  }, []);
-  const [gouvernoratChartData, setGouvernoratChartData] = useState({
-    labels: [],
-    datasets: [
-      {
-        label: 'Commandes par gouvernorat',
-        backgroundColor: '#36A2EB',
-        data: [],
-      },
-    ],
-  });
-  
-  useEffect(() => {
-    const fetchCommandes = async () => {
-      const commandesRef = collection(fire, 'commande');
-      const commandesSnapshot = await getDocs(commandesRef);
-      const productCounts = {};
-      const dailySums = {};
-      const gouvernoratCounts = {};
-  
-      for (const docSnapshot of commandesSnapshot.docs) {
-        const commande = docSnapshot.data();
-        const date = commande.commandeDate.toDate().toISOString().split('T')[0];
-        dailySums[date] = (dailySums[date] || 0) + commande.totalPrice;
-  
-        commande.products.forEach((product) => {
-          productCounts[product.id] = (productCounts[product.id] || 0) + 1;
-        });
-  
-        const userRef = doc(fire, 'users', commande.userId);
-        const userSnap = await getDoc(userRef);
-        const user = userSnap.data();
-        const gouvernorat = user.gouvernorat;
-        gouvernoratCounts[gouvernorat] = (gouvernoratCounts[gouvernorat] || 0) + 1;
-      }
-  
-      // Set chart data for products
-      const productLabels = Object.keys(productCounts);
-      const productData = Object.values(productCounts);
-      const backgroundColors = productLabels.map(() => '#' + Math.floor(Math.random() * 16777215).toString(16));
-      setChartData({
-        labels: productLabels,
-        datasets: [
-          {
-            data: productData,
-            backgroundColor: backgroundColors,
-            hoverBackgroundColor: backgroundColors,
-          },
-        ],
-      });
-  
       // Set chart data for daily sums
       const sortedDates = Object.keys(dailySums).sort();
       const sortedSums = sortedDates.map(date => dailySums[date]);
@@ -157,7 +107,7 @@ const Charts = () => {
           },
         ],
       });
-  
+
       // Set chart data for gouvernorats
       const sortedGouvernorats = Object.keys(gouvernoratCounts).sort((a, b) => gouvernoratCounts[b] - gouvernoratCounts[a]);
       const sortedGouvernoratCounts = sortedGouvernorats.map(gouvernorat => gouvernoratCounts[gouvernorat]);
@@ -172,9 +122,10 @@ const Charts = () => {
         ],
       });
     };
-  
+
     fetchCommandes();
   }, []);
+
   
   return (
     <CRow>
