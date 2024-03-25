@@ -1,83 +1,75 @@
 /* eslint-disable prettier/prettier */
 // eslint-disable-next-line prettier/prettier
 import React, { useEffect, useState } from 'react';
-import {
-  CRow,
-  CCol,
-  CDropdown,
-  CDropdownMenu,
-  CDropdownItem,
-  CDropdownToggle,
-  CWidgetStatsA,
-} from '@coreui/react'
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { fire } from '../../components/firebase-config';
-import { getStyle } from '@coreui/utils'
-import { CChartBar, CChartLine } from '@coreui/react-chartjs'
-import CIcon from '@coreui/icons-react'
-import { cilArrowBottom, cilArrowTop, cilOptions } from '@coreui/icons'
+import { CRow, CCol, CWidgetStatsA } from '@coreui/react';
+import { CChartLine } from '@coreui/react-chartjs';
+import CIcon from '@coreui/icons-react';
+import { cilArrowBottom, cilArrowTop } from '@coreui/icons';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const WidgetsDropdown = () => {
   const [totalUsers, setTotalUsers] = useState(0);
-  const [prevDayUsers, setPrevDayUsers] = useState(0); // Assume this is fetched from somewhere
-
   const [totalSales, setTotalSales] = useState(0);
-  const [prevDaySales, setPrevDaySales] = useState(0); // Assume this is fetched from somewhere
   const [totalCommands, setTotalCommands] = useState(0);
   const [averageOrderValue, setAverageOrderValue] = useState(0);
+  const [token, setToken] = useState();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchAverageOrderValue = async () => {
-      const commandsRef = collection(fire, 'commande');
-      const commandsSnapshot = await getDocs(commandsRef);
-      let totalSales = 0;
-      commandsSnapshot.forEach((doc) => {
-        totalSales += doc.data().totalPrice;
-      });
-      const avgOrderValue = totalSales / commandsSnapshot.size;
-      setAverageOrderValue(avgOrderValue);
-    };
-  
-    fetchAverageOrderValue();
-  }, []);
-  
-  useEffect(() => {
-    const fetchCommands = async () => {
-      const commandsRef = collection(fire, 'commande');
-      const commandsSnapshot = await getDocs(commandsRef);
-      setTotalCommands(commandsSnapshot.size);
-    };
-  
-    fetchCommands();
-  }, []);
-  
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const usersRef = collection(fire, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      setTotalUsers(usersSnapshot.size);
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        setToken(token);
+
+        const [commandesResponse, usersResponse] = await Promise.all([
+          axios.get('http://localhost:4000/commande', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'Cache-Control': 'no-cache',
+            }
+          }),
+          axios.get('http://localhost:4000/user', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'Cache-Control': 'no-cache',
+            }
+          })
+        ]);
+
+        if (commandesResponse.data && commandesResponse.data.message === 'Success') {
+          const fetchedCommandes = commandesResponse.data.data;
+          setTotalCommands(fetchedCommandes.length);
+
+          let totalPrice = 0;
+          fetchedCommandes.forEach(commande => {
+            totalPrice += parseFloat(commande.totalPrice);
+          });
+
+          setTotalSales(totalPrice);
+          setAverageOrderValue(totalPrice / fetchedCommandes.length);
+        } else if (commandesResponse.data.message === 'Unauthorized: Access token is required') {
+          navigate(`/login`);
+        }
+
+        if (usersResponse.data && usersResponse.data.message === 'Users found') {
+          const fetchedUsers = usersResponse.data.data;
+          setTotalUsers(fetchedUsers.length);
+        } else if (usersResponse.data.message === 'Unauthorized: Access token is required') {
+          navigate(`/login`);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
     };
 
-    fetchUsers();
+    fetchData();
   }, []);
 
-  useEffect(() => {
-    const fetchTotalSales = async () => {
-      const commandeRef = collection(fire, 'commande');
-      const q = query(commandeRef, where("status", "==", "Confirmed"));
-      const commandeSnapshot = await getDocs(q);
-      let total = 0;
-      commandeSnapshot.forEach((doc) => {
-        total += doc.data().totalPrice;
-      });
-      setTotalSales(total);
-    };
-
-    fetchTotalSales();
-  }, []);
-
-  const userPercentageChange = ((totalUsers - prevDayUsers) / prevDayUsers) * 100;
-  const salesPercentageChange = ((totalSales - prevDaySales) / prevDaySales) * 100;
+  const userPercentageChange = 0; // Calculate this if needed
+  const salesPercentageChange = 0;
 
   return (
     <CRow>
