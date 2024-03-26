@@ -11,6 +11,8 @@ import {
 } from '@coreui/react-chartjs';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { fire } from '../../components/firebase-config';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Charts = () => {
   const [chartData, setChartData] = useState({
@@ -45,88 +47,72 @@ const Charts = () => {
       },
     ],
   });
+  const [commandes, setCommandes] = useState([]);
+  const [token, setToken] = useState();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCommandes = async () => {
-      const commandesRef = collection(fire, 'commande');
-      const commandesSnapshot = await getDocs(commandesRef);
-      const productCounts = {};
-      const dailySums = {};
-      const gouvernoratCounts = {};
+        try {
+            // Retrieve token from localStorage
+            const storedToken = localStorage.getItem('token');
+            
+            if (!storedToken) {
+                // Redirect to login if token is missing
+                navigate(`/login`);
+                return;
+            }
 
-      for (const docSnapshot of commandesSnapshot.docs) {
-        const commande = docSnapshot.data();
-        const date = commande.commandeDate.toDate().toISOString().split('T')[0];
-        dailySums[date] = (dailySums[date] || 0) + commande.totalPrice;
+            // Set token state
+            setToken(storedToken);
 
-        commande.products.forEach((product) => {
-          productCounts[product.id] = (productCounts[product.id] || 0) + 1;
-        });
+            // Fetch data using Axios
+            const response = await axios.get('http://localhost:4000/commande', {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${storedToken}`, // Use stored token
+                },
+            });
 
-        const userRef = doc(fire, 'users', commande.userId);
-        const userSnap = await getDoc(userRef);
-        const user = userSnap.data();
-        const gouvernorat = user.gouvernorat;
-        gouvernoratCounts[gouvernorat] = (gouvernoratCounts[gouvernorat] || 0) + 1;
-      }
+            if (response.data && response.data.message === 'Success') {
+                // Process commandes data
+                const commandesData = response.data.data;
+                
+                setCommandes(commandesData);
 
-      // Set chart data for products
-      const productLabels = [];
-      const productData = [];
-      const backgroundColors = [];
-      for (const [productId, count] of Object.entries(productCounts)) {
-        const productRef = doc(fire, 'products', productId);
-        const productSnap = await getDoc(productRef);
-        const productName = productSnap.exists() ? productSnap.data().name : 'Unknown Product';
-        productLabels.push(productName);
-        productData.push(count);
-        backgroundColors.push('#' + Math.floor(Math.random() * 16777215).toString(16));
-      }
-
-      setChartData({
-        labels: productLabels,
-        datasets: [
-          {
-            data: productData,
-            backgroundColor: backgroundColors,
-            hoverBackgroundColor: backgroundColors,
-          },
-        ],
-      });
-
-      // Set chart data for daily sums
-      const sortedDates = Object.keys(dailySums).sort();
-      const sortedSums = sortedDates.map(date => dailySums[date]);
-      setBarChartData({
-        labels: sortedDates,
-        datasets: [
-          {
-            label: 'Total Commandes',
-            backgroundColor: '#f87979',
-            data: sortedSums,
-          },
-        ],
-      });
-
-      // Set chart data for gouvernorats
-      const sortedGouvernorats = Object.keys(gouvernoratCounts).sort((a, b) => gouvernoratCounts[b] - gouvernoratCounts[a]);
-      const sortedGouvernoratCounts = sortedGouvernorats.map(gouvernorat => gouvernoratCounts[gouvernorat]);
-      setGouvernoratChartData({
-        labels: sortedGouvernorats,
-        datasets: [
-          {
-            label: 'Commandes par gouvernorat',
-            backgroundColor: '#36A2EB',
-            data: sortedGouvernoratCounts,
-          },
-        ],
-      });
+                // Calculate daily sums
+                const dailyCounts = {};
+                commandesData.forEach(item => {
+                  const date = new Date(item.commandeDate).toISOString().split('T')[0];
+                  dailyCounts[date] = (dailyCounts[date] || 0) + 1; // Count each commande
+                });
+        
+                // Sort dates and counts
+                const sortedDates = Object.keys(dailyCounts).sort();
+                const sortedCounts = sortedDates.map(date => dailyCounts[date]);
+        
+                // Update bar chart data
+                setBarChartData({
+                  labels: sortedDates,
+                  datasets: [{
+                    label: 'Number of Commandes',
+                    backgroundColor: '#f87979',
+                    data: sortedCounts, // Use counts for the data
+                  }],
+                });
+            } else if (response.data.message === 'Unauthorized: Access token is required') {
+                // Redirect to login if token is unauthorized
+                navigate(`/login`);
+            }
+        } catch (error) {
+            console.error('Error fetching commandes:', error);
+        }
     };
 
+    // Call fetchCommandes function
     fetchCommandes();
-  }, []);
+}, []); // Empty dependency array ensures this effect runs only once on component mount
 
-  
   return (
     <CRow>
       

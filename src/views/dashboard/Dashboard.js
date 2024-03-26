@@ -57,63 +57,74 @@ import avatar6 from 'src/assets/images/avatars/6.jpg'
 
 import WidgetsBrand from '../widgets/WidgetsBrand'
 import WidgetsDropdown from '../widgets/WidgetsDropdown'
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Dashboard = () => {
   const [users, setUsers] = useState([]);
-
-const random = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
-
 const [salesData, setSalesData] = useState({
   labels: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   datasets: [],
 });
+const [commandes, setCommandes] = useState([]);
+const [token, setToken] = useState(); // Initialize token as null
 
-const fetchUsers = async () => {
-  const usersRef = collection(fire, 'users');
-  const snapshot = await getDocs(usersRef);
-  const userData = await Promise.all(snapshot.docs.map(async (doc) => {
-    const user = { ...doc.data(), id: doc.id };
-    user.totalOrders = await calculateTotalOrders(doc.id);
-    return user;
-  }));
-  setUsers(userData);
-};
+const navigate = useNavigate();
 
 useEffect(() => {
-  fetchUsers();
-  const fetchSalesData = async () => {
-    const salesRef = collection(fire, 'commande');
-    const snapshot = await getDocs(salesRef);
-    const sales = Array(7).fill(0); // Array to hold sales for each day of the week
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const dayOfWeek = data.commandeDate.toDate().getDay();
-      sales[dayOfWeek] = sales[dayOfWeek] + data.totalPrice;
-    });
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      setToken(token);
+      const [commandesResponse, usersResponse] = await Promise.all([
+        axios.get('http://localhost:4000/commande', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+          }
+        }),
+        axios.get('http://localhost:4000/user', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+          }
+        })
+      ]);
 
-    setSalesData({
-      ...salesData,
-      datasets: [
-        {
-          label: 'Total Sales',
-          backgroundColor: 'rgba(0,123,255,0.5)',
-          borderColor: 'rgba(0,123,255,1)',
-          pointBackgroundColor: 'rgba(0,123,255,1)',
-          pointBorderColor: '#fff',
-          data: sales,
-        },
-      ],
-    });
+      if (commandesResponse.data && commandesResponse.data.message === 'Success') {
+        const fetchedCommandes = commandesResponse.data.data;
+        setCommandes(fetchedCommandes);
+      } else if (commandesResponse.data.message === 'Unauthorized: Access token is required') {
+        navigate(`/login`);
+      }
+
+      if (usersResponse.data && usersResponse.data.message === 'Users found') {
+        const fetchedUsers = usersResponse.data.data;
+        setUsers(fetchedUsers);
+      } else if (usersResponse.data.message === 'Unauthorized: Access token is required') {
+        navigate(`/login`);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
   };
-
-  fetchSalesData();
+  fetchData();
 }, []);
 
-const calculateTotalOrders = async (userId) => {
-  const commandesRef = collection(fire, 'commande');
-  const querySnapshot = await getDocs(query(commandesRef, where('userId', '==', userId)));
-  return querySnapshot.docs.reduce((total, doc) => total + doc.data().totalPrice, 0);
+const calculateTotalOrders = (userId) => {
+  let total = 0;
+  commandes.forEach(commande => {
+    if (commande.user && commande.user.id === userId) { // Check if commande.user is not null
+      total += 1;
+    }
+  });
+  return total;
 };
+
+
+
 
 
   const progressExample = [
@@ -297,10 +308,6 @@ const calculateTotalOrders = async (userId) => {
         />
       </CCardBody>
     </CCard>
-
-
-      
-
       <CRow>
         <CCol xs>
           <CCard className="mb-4">
@@ -421,7 +428,7 @@ const calculateTotalOrders = async (userId) => {
         {user.gouvernorat || 'N/A'}
       </CTableDataCell>
       <CTableDataCell>
-      {user.totalOrders.toFixed(2)}
+      {calculateTotalOrders(user.id).toFixed(2)}
       </CTableDataCell>
     </CTableRow>
   ))}

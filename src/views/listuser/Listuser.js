@@ -17,41 +17,45 @@ import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { fire } from '../../components/firebase-config';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Listuser = () => {
   const [users, setUsers] = useState([]);
   const auth = getAuth();
   const navigate = useNavigate();
-
-  const fetchData = () => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const usersRef = collection(fire, 'users1');
-        onSnapshot(usersRef, (snapshot) => {
-          const userArray = [];
-          snapshot.forEach((doc) => {
-            const userData = doc.data();
-            userData.id = doc.id; // Unique identifier
-            userArray.push(userData);
-          });
-          setUsers(userArray);
+  const [token, setToken] = useState();
+    
+    const fetchUser = async () => {
+      const token =localStorage.getItem('token');
+      setToken(token);
+      try {
+        const response = await axios.get('http://localhost:4000/user', {
+          headers: {
+            'Content-Type': 'application/json', // Set content type to JSON
+            'Authorization': `Bearer ${token}` // Include the token in the Authorization header
+          }
         });
-      } else {
-        setUsers([]);
+        if (response.data && response.data.message === 'Success') {
+          setUsers(response.data.data);
+        } else if (response.data.message === 'Unauthorized: Access token is required') {
+          navigate(`/login`);
+        }
+      } catch (error) {
+        console.error('Error fetching commandes:', error);
       }
-    });
-  };
+    };
+   
 
   useEffect(() => {
-    fetchData();
-  }, [auth]);
+    fetchUser();
+  }, []);
 
   const handleDelete = async (id) => {
     try {
       const userRef = doc(fire, 'users1', id);
       await deleteDoc(userRef);
       // Refresh the user list after successful deletion
-      fetchData();
+      fetchUser();
     } catch (error) {
       console.error('Error deleting user:', error.message);
     }

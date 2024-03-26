@@ -94,7 +94,7 @@ const CommandeList = () => {
               <CButton color="success" className="me-2" onClick={() => updateStatus(commande.id, 'Confirmed')}>
                 Confirmer
               </CButton>
-              <CButton color="danger" onClick={() => updateStatus(commande.id, 'Rejected')}>
+              <CButton color="danger" onClick={() => updateStatus(commande.id, 'Rejected', )}>
                 Rejeter
               </CButton>
             </div>

@@ -21,7 +21,8 @@ const CommandeListTable = () => {
   const navigate = useNavigate();
   useEffect(() => {
     const token =localStorage.getItem('token');
-    setToken(token);;
+    setToken(token);
+    console.log(token);
     const fetchCommandes = async () => {
       try {
         // Replace 'http://localhost:4000' with your actual backend URL
@@ -38,12 +39,11 @@ const CommandeListTable = () => {
         }
       } catch (error) {
         console.error('Error fetching commandes:', error);
-        // toast.error('Error fetching commandes: ' + error.message);
       }
     };
     fetchCommandes();
+    console.log(commandes);
   }, []);
-
   return (
     <CContainer className="mt-4">
       <CTable responsive="sm" hover borderless>
