@@ -70,7 +70,7 @@ const CommandeList = () => {
     <CContainer>
          <ToastContainer />
       <h2>Liste des Commandes</h2>
-      {commandes.map((commande) => (
+      {commandes.filter(commande => commande.state === 'pending').map((commande) => (
         <CCard key={commande.id} className="mb-3">
           <CCardBody>
           <CCardTitle>Date: {commande.commandeDate || 'N/A'}</CCardTitle>
@@ -103,6 +103,7 @@ const CommandeList = () => {
       ))}
     </CContainer>
   );
+
 };
 
 export default CommandeList;

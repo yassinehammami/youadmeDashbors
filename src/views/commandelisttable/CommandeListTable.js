@@ -57,7 +57,7 @@ const CommandeListTable = () => {
           </CTableRow>
         </CTableHead>
         <CTableBody>
-        {commandes.map((commande) => (
+        {commandes.filter(commande => commande.state !== 'pending').map((commande) => (
           <CTableRow key={commande.id}>
             <CTableDataCell>{commande.commandeDate ? new Date(commande.commandeDate).toLocaleDateString() : 'N/A'}</CTableDataCell>
             <CTableDataCell>{commande.totalPrice} DT</CTableDataCell>
@@ -79,6 +79,7 @@ const CommandeListTable = () => {
       </CTable>
     </CContainer>
   );
+
 };
 
 export default CommandeListTable;
